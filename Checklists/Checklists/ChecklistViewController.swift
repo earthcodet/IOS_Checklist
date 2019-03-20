@@ -3,6 +3,7 @@ import UIKit
 class ChecklistViewController : UITableViewController,AddItemViewControllerDelegate {
     func addItemViewControllerDidCancel(_ controller: ItemDetailViewController) {
          navigationController?.popViewController(animated:true)
+        saveChecklistItems();
     }
     
     func addItemViewController(_ controller: ItemDetailViewController, didFinisAdding item: ChecklistItem) {
@@ -13,6 +14,8 @@ class ChecklistViewController : UITableViewController,AddItemViewControllerDeleg
         let indexPaths = [indexPath]
         tableView.insertRows(at: indexPaths, with: .automatic)
          navigationController?.popViewController(animated:true)
+        
+        saveChecklistItems();
     }
     
     var items = [ChecklistItem]()
@@ -51,9 +54,19 @@ class ChecklistViewController : UITableViewController,AddItemViewControllerDeleg
         print("Document foler is \(documentDirirectory())")
         print("Data file path is \(dataFilePath())")
         
+        loadChecklistItems()
+        
         // Do any additional setup after loading the view, typically from a nib.
     }
-    
+    func saveChecklistItems() {
+        let encoder = PropertyListEncoder()
+        do{
+            let data = try encoder.encode(items)
+            try data.write(to: dataFilePath(),options: Data.WritingOptions.atomic)
+        } catch {
+            print("Error encoding item array: \(error.localizedDescription)")
+        }
+    }
     //    MARK: data soure protocol.
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return items.count
@@ -88,7 +101,7 @@ class ChecklistViewController : UITableViewController,AddItemViewControllerDeleg
         }
         tableView.deselectRow(at: indexPath, animated: true)
         
-        
+        saveChecklistItems()
     }
   
     
@@ -103,6 +116,7 @@ class ChecklistViewController : UITableViewController,AddItemViewControllerDeleg
         } else {
             label.text = ""
         }
+        saveChecklistItems()
     }
 
     func configureText(for cell: UITableViewCell, with item: ChecklistItem){
@@ -116,6 +130,7 @@ class ChecklistViewController : UITableViewController,AddItemViewControllerDeleg
         //2
         let indexPaths = [indexPath]
         tableView.deleteRows(at: indexPaths, with: .automatic)
+        saveChecklistItems()
     }
     
     //MARK:- Navigation
@@ -127,6 +142,7 @@ class ChecklistViewController : UITableViewController,AddItemViewControllerDeleg
                 as! ItemDetailViewController
             //3
             controller.delegate = self
+            saveChecklistItems()
             
         }else if segue.identifier == "EditItem" {
             let controller = segue.destination as! ItemDetailViewController
@@ -135,6 +151,7 @@ class ChecklistViewController : UITableViewController,AddItemViewControllerDeleg
             if let indexPath = tableView.indexPath(for: sender as! UITableViewCell){
                 controller.itemToEdit = items[indexPath.row]
             }
+            saveChecklistItems()
         }
     }
     func addItemViewController(_ controller:ItemDetailViewController,didFinishEditing item: ChecklistItem){
@@ -145,6 +162,7 @@ class ChecklistViewController : UITableViewController,AddItemViewControllerDeleg
             }
         }
         navigationController?.popViewController(animated: true)
+        saveChecklistItems();
     }
     func documentDirirectory() -> URL {
         let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
@@ -153,5 +171,16 @@ class ChecklistViewController : UITableViewController,AddItemViewControllerDeleg
     }
     func dataFilePath() -> URL {
         return documentDirirectory().appendingPathComponent("Checklist.plist")
+    }
+    func loadChecklistItems() {
+        let path = dataFilePath()
+        if let data = try? Data(contentsOf: path) {
+            let decoder = PropertyListDecoder()
+        do {
+            items = try decoder.decode([ChecklistItem].self, from: data)
+        } catch {
+            print("Error decording item array: \(error.localizedDescription)")
+        }
+    }
     }
 }
